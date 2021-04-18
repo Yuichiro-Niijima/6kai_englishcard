@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css"
+        integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <title>task_content</title>
+</head>
+
+<body>
+    <header class="task_content_title">
+        <h1 style="color: #6D7587;">英単語</h1>
+        <button id="reset"><i class="fas fa-redo-alt"></i></button>
+    </header>
+
+    <main>
+        <button class="button icon-box" id="know" value="0">
+            <i class="far fa-circle"></i>
+        </button>
+
+        <div class="word">
+            <div class="question">
+                <p id="question">英語</p>
+            </div>
+            <div class="answer">
+                <p id="answerbox">答えを見る</p>
+                <p id="answer"></p>
+            </div>
+        </div>
+
+        <button class="button icon-box batu" id="unknown" value="1">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <footer>
+            <div class="know">
+                <p id="count_know">0</p>
+                <p>know</p>
+            </div>
+
+            <div class="unknown">
+                <p id="count_unknown">0</p>
+                <p>unknown</p>
+            </div>
+
+
+            <div class="rest">
+                <p id="rest"></p>
+                <p>残り</p>
+            </div>
+        </footer>
+    </main>
+
+
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.4/firebase.js"></script>
+    <script>
+        window.onload = function () {
+            // 【main-script】 を実行
+            getJsonp_GAS();
+        }
+        function getJsonp_GAS() {
+            // エイジャックス　リロードせずにページの内容を変更可能。非同期処理。
+            $.ajax({
+                type: 'GET',
+                url: 'https://script.google.com/macros/s/AKfycbxP3V_cVeELyWBPfGprGJdw03SV1BMTEjwIw4iDbYLbSqCIc5K0/exec',
+                dataType: 'jsonp',
+                jsonpCallback: 'jsondata',
+                success: function (json) {
+                    let len = json.length;
+                    let english = '';
+
+                    i = 0;
+                    know = 0;
+                    unknown = 0;
+                    $("#rest").text(len - i);
+
+                    // Your web app's Firebase configuration
+                    var firebaseConfig = {
+                        apiKey: "AIzaSyAMLCnEwOsf1FFVylG4XG-IatM0aSU7gyQ",
+                        authDomain: "english-card-c5ce4.firebaseapp.com",
+                        databaseURL: "https://english-card-c5ce4.firebaseio.com",
+                        projectId: "english-card-c5ce4",
+                        storageBucket: "english-card-c5ce4.appspot.com",
+                        messagingSenderId: "160451401358",
+                        appId: "1:160451401358:web:3b661862f22acebf665bdf"
+                    };
+                    // Initialize Firebase
+                    firebase.initializeApp(firebaseConfig);
+                    // データベースの設定を記述
+                    const db = firebase.firestore().collection("flash-card").doc("XIx1HvygeOhIfwv0LH1m");
+
+                    // ------------------------------------------
+                    //           firebaes リセット
+                    // ------------------------------------------
+                    $("#reset").on("click", function () {
+                        db.collection("flash-card").doc().delete().then(function () {
+                            console.log("Document successfully deleted!");
+                        }).catch(function (error) {
+                            console.error("Error removing document: ", error);
+                        });
+                    })
+
+                    //最初の問題を表示
+                    $("#question").text(json[i].english);
+                    $("#answerbox").on("click", function () {
+                        $("#answerbox").hide();
+                        $("#answer").show();
+                        $("#answer").text(json[i].japanese);
+                    });
+
+                    //  クリック後、次の問題を表示
+                    $(".button").on("click", function () {
+                        if ($(this).val() == "0") {
+                            know++;
+                            i++;
+
+                            $("#count_know").text(know);
+
+                            // ------------------------------------------
+                            //           ドキュメントの追加
+                            // ------------------------------------------
+
+                            db.set({
+                                english: $("#question").text(),
+                                japanese: $("#answer").text(),
+                                know: $("#count_know").text(),
+                                unknown: $("#count_unknown").text(),
+                                rest: $("#rest").text(),
+                            })
+                                .then(function () {
+                                    console.log("Document successfully written!");
+                                    db.get().then(querySnapshot => {
+                                        console.log("できた");
+
+                                        console.log(querySnapshot.data());
+
+                                        // $("#question").text(querySnapshot.data().english),
+                                        $("#answer").text(querySnapshot.data().japanese),
+                                        $("#count_know").text(querySnapshot.data().know),
+                                        $("#count_unknown").text(querySnapshot.data().unknown),
+                                        $("#rest").text(querySnapshot.data().rest)
+
+                                    });
+
+                                })
+                                .catch(function (error) {
+                                    console.error("Error writing document: ", error);
+                                });
+
+                            // ------------------------------------------
+                            //           ドキュメントの受信（englishは、次の単語の必要性があるから、+1？）
+                            // ------------------------------------------
+                            // db.get().then(querySnapshot => {
+                            //     console.log("できた");
+                                
+                            //     console.log(querySnapshot.data());
+
+                            //     // $("#question").text(querySnapshot.data().english),
+                            //     $("#answer").text(querySnapshot.data().japanese),
+                            //     $("#count_know").text(querySnapshot.data().know),
+                            //     $("#count_unknown").text(querySnapshot.data().unknown),
+                            //     $("#rest").text(querySnapshot.data().rest)
+
+                            // });
+
+                            // ------------------------------------------
+                            //           ドキュメントの受信2（consoleに表示されない。）
+                            // ------------------------------------------
+
+
+                            // db.get().then(function (doc) {
+                            //     if (doc.exists) {
+                            //         console.log("Document data:", doc.data());
+                            //     } else {
+                            //         // doc.data() will be undefined in this case
+                            //         console.log("No such document!");
+                            //     }
+                            // }).catch(function (error) {
+                            //     console.log("Error getting document:", error);
+                            // });
+
+
+
+                        } else if ($(this).val() == "1") {
+                            unknown++;
+                            i++;
+
+                            $("#count_unknown").text(unknown);
+
+
+                            // ------------------------------------------
+                            //           ドキュメントの追加
+                            // ------------------------------------------
+
+                            db.set({
+                                english: $("#question").text(),
+                                japanese: $("#answer").text(),
+                                know: $("#count_know").text(),
+                                unknown: $("#count_unknown").text(),
+                                rest: $("#rest").text(),
+                            })
+                                .then(function () {
+                                    console.log("Document successfully written!");
+                                })
+                                .catch(function (error) {
+                                    console.error("Error writing document: ", error);
+                                });
+
+                            // ------------------------------------------
+                            //           ドキュメントの受信
+                            // ------------------------------------------
+                
+                            db.get().then(docSnapshot => {
+                                
+
+                                console.log(docSnapshot.data());
+                                // $("#question").text(docSnapshot.data().english),
+                                $("#answer").text(docSnapshot.data().japanese),
+                                $("#count_know").text(docSnapshot.data().know),
+                                $("#count_unknown").text(docSnapshot.data().unknown),
+                                $("#rest").text(docSnapshot.data().rest)
+                                console.log("成功");
+                            });
+                            
+                        }
+
+                        $("#rest").text(len - i);
+
+
+                        if (i < len) {
+                            $("#question").text(json[i].english);
+                            $("#answer").hide();
+                            $("#answerbox").show();
+                            $("#answerbox").on("click", function () {
+                                $("#answerbox").hide();
+                                $("#answer").show();
+                                $("#answer").text(json[i].japanese);
+                            });
+                        } else {
+                            $("#question").text("終了");
+                        }
+
+                    })
+
+
+                }
+            });
+        }
+    </script>
+
+
+    <!-- 以下、firebase処理　ifに処理を入れるためコメントアウト -->
+
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/7.14.4/firebase.js"></script> -->
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script>
+        // Your web app's Firebase configuration
+        // var firebaseConfig = {
+        //     apiKey: "AIzaSyAMLCnEwOsf1FFVylG4XG-IatM0aSU7gyQ",
+        //     authDomain: "english-card-c5ce4.firebaseapp.com",
+        //     databaseURL: "https://english-card-c5ce4.firebaseio.com",
+        //     projectId: "english-card-c5ce4",
+        //     storageBucket: "english-card-c5ce4.appspot.com",
+        //     messagingSenderId: "160451401358",
+        //     appId: "1:160451401358:web:3b661862f22acebf665bdf"
+        // };
+        // Initialize Firebase
+        // firebase.initializeApp(firebaseConfig);
+      // データベースの設定を記述
+        // const db = firebase.firestore().collection("flash-card");
+
+        // データを送信する処理
+        // $(".button").on("click", function () {
+        //     const dateObject = {
+
+
+        //         english: $("#question").text(json[i].english),
+        //         japanese: $("#answer").text(json[i].japanese),
+        //         know: $("#count_know").text(know),
+        //         unknown: $("#count_unknown").text(unknown),
+        //         rest: $("#rest").text(len - i),
+        //     }
+        //     db.add(dateObject);
+        // });
+
+        // データをリアルタイムに取得する処理
+        // db.orderBy('time', 'desc').onSnapshot(function (querySnapshot) {
+        //     console.log(querySnapshot.docs[0].data());
+
+        // });
+
+
+
+    </script>
+</body>
+
+</html>
